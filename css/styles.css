@@ -275,6 +275,59 @@ body {
 
 .match__divider { height: 1px; background: var(--line); margin: 2px 0; }
 
+/* ---------- ELIMINATORIAS ---------- */
+.knockout-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 920px;
+  margin: 40px auto 0;
+  padding: 0 20px;
+}
+.knockout-divider::before,
+.knockout-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.knockout-divider span {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.knockout-section {
+  padding-top: 28px;
+  padding-bottom: 20px;
+}
+
+.ko-round { margin-bottom: 36px; }
+.ko-round__title {
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--white);
+  margin-bottom: 14px;
+  padding-left: 4px;
+  border-left: 3px solid var(--gold);
+  padding-left: 12px;
+}
+
+.match--ko::before {
+  background: linear-gradient(180deg, var(--gold), var(--gold-soft));
+}
+
+.emoji-flag.tbd {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 16px;
+}
+
 .footer {
   text-align: center;
   padding: 28px 20px;

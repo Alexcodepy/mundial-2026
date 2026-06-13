@@ -1,9 +1,11 @@
 const tabsEl = document.getElementById("tabs");
 const matchesEl = document.getElementById("matches");
+const knockoutEl = document.getElementById("knockout");
 
-let GROUPS_DATA = GROUPS;     // de data.js (fallback)
-let FIXTURES_DATA = FIXTURES; // de data.js (fallback)
-let CRESTS = {};              // nombre -> URL de escudo (solo modo API)
+let GROUPS_DATA = GROUPS;
+let FIXTURES_DATA = FIXTURES;
+let KNOCKOUT_DATA = [];       // partidos eliminatorios de la API
+let CRESTS = {};
 let activeGroup = Object.keys(GROUPS_DATA)[0];
 let liveSource = false;
 
@@ -67,9 +69,33 @@ async function loadLive() {
         as: done || live ? (ft.away ?? 0) : null,
         status: live ? "live" : undefined,
         date: new Date(m.utcDate).toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
-        venue: m.venue || (m.area?.name ?? ""),
+        venue: (m.venue && m.venue !== "WORLD") ? m.venue : "",
       });
     }
+
+    // eliminatorias
+    const KO_STAGES = ["QUARTER_FINALS", "SEMI_FINALS", "THIRD_PLACE", "FINAL"];
+    const knockout = [];
+    for (const m of json.matches) {
+      if (!KO_STAGES.includes(m.stage)) continue;
+      const st = m.status;
+      const done = st === "FINISHED";
+      const live = st === "IN_PLAY" || st === "PAUSED";
+      const ft = m.score?.fullTime || {};
+      const h = m.homeTeam?.name || null;
+      const a = m.awayTeam?.name || null;
+      if (h && m.homeTeam?.crest) crests[h] = m.homeTeam.crest;
+      if (a && m.awayTeam?.crest) crests[a] = m.awayTeam.crest;
+      knockout.push({
+        stage: m.stage, h, a,
+        hs: done || live ? (ft.home ?? 0) : null,
+        as: done || live ? (ft.away ?? 0) : null,
+        status: live ? "live" : undefined,
+        date: new Date(m.utcDate).toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
+        venue: (m.venue && m.venue !== "WORLD") ? m.venue : "",
+      });
+    }
+    KNOCKOUT_DATA = knockout;
 
     GROUPS_DATA = groups;
     FIXTURES_DATA = fixtures;
@@ -166,10 +192,62 @@ function renderTabs() {
   );
 }
 
+const KO_LABELS = {
+  QUARTER_FINALS: "Cuartos de final",
+  SEMI_FINALS: "Semifinales",
+  THIRD_PLACE: "Tercer puesto",
+  FINAL: "Final",
+};
+
+function koMatchCard(m) {
+  const st = statusLabel(m.status === "live" ? "live" : (m.hs !== null ? "ft" : "soon"));
+  const done = m.hs !== null;
+  const hName = m.h || "Por determinar";
+  const aName = m.a || "Por determinar";
+  const hFlag = m.h ? flag(m.h) : `<span class="emoji-flag tbd">?</span>`;
+  const aFlag = m.a ? flag(m.a) : `<span class="emoji-flag tbd">?</span>`;
+  const hWin = done && m.hs > m.as;
+  const aWin = done && m.as > m.hs;
+  return `
+    <article class="match match--ko">
+      <div class="match__top">
+        <span>${m.venue || m.date}</span>
+        <span class="match__status ${st.cls}">${st.txt}</span>
+      </div>
+      <div class="team ${hWin ? "win" : ""}">
+        <span class="team__flag">${hFlag}</span>
+        <span class="team__name">${hName}</span>
+        <span class="team__score">${done ? m.hs : "–"}</span>
+      </div>
+      <div class="match__divider"></div>
+      <div class="team ${aWin ? "win" : ""}">
+        <span class="team__flag">${aFlag}</span>
+        <span class="team__name">${aName}</span>
+        <span class="team__score">${done ? m.as : "–"}</span>
+      </div>
+      <div class="match__date">${m.date}</div>
+    </article>`;
+}
+
+function renderKnockout() {
+  if (!KNOCKOUT_DATA.length) { knockoutEl.innerHTML = ""; return; }
+  const byStage = {};
+  for (const m of KNOCKOUT_DATA) {
+    (byStage[m.stage] = byStage[m.stage] || []).push(m);
+  }
+  const order = ["QUARTER_FINALS", "SEMI_FINALS", "THIRD_PLACE", "FINAL"];
+  knockoutEl.innerHTML = order.filter(s => byStage[s]).map(s => `
+    <div class="ko-round">
+      <h3 class="ko-round__title">${KO_LABELS[s]}</h3>
+      <div class="fixtures">${byStage[s].map(koMatchCard).join("")}</div>
+    </div>`).join("");
+}
+
 async function refresh() {
   await loadLive();
   renderTabs();
   render();
+  renderKnockout();
 }
 
 refresh();
