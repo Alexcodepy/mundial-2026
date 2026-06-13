@@ -22,13 +22,26 @@ function statusLabel(s) {
   return { cls: "status--soon", txt: "Próximo" };
 }
 
-// ---------- carga desde football-data.org (vía proxy /api/matches) ----------
+// ---------- carga de datos en vivo ----------
+// Orden: data/matches.json (generado por GitHub Actions, funciona en Pages)
+//        -> /api/matches (proxy local con server.py)
+//        -> fallback estático de data.js
+async function fetchMatches() {
+  for (const url of ["data/matches.json", "/api/matches"]) {
+    try {
+      const res = await fetch(url + "?t=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) continue;
+      const json = await res.json();
+      if (!json.error && Array.isArray(json.matches) && json.matches.length) return json;
+    } catch { /* siguiente fuente */ }
+  }
+  return null;
+}
+
 async function loadLive() {
   try {
-    const res = await fetch("/api/matches", { cache: "no-store" });
-    if (!res.ok) return false;
-    const json = await res.json();
-    if (json.error || !Array.isArray(json.matches) || !json.matches.length) return false;
+    const json = await fetchMatches();
+    if (!json) return false;
 
     const groups = {};
     const fixtures = [];
